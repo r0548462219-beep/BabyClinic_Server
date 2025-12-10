@@ -69,6 +69,21 @@ namespace BabyClinicAPI.Controllers
             return NoContent(); // 204
         }
 
+        // DELETE /api/nurses/{id}
+        [HttpDelete("{id}")]
+        public IActionResult DeleteNurse(int id)
+        {
+            var nurse = _nurses.FirstOrDefault(n => n.Id == id);
+
+            if (nurse == null)
+            {
+                return NotFound(); // 404
+            }
+
+            _nurses.Remove(nurse);
+            return NoContent(); // 204
+        }
+
         // --- פעולה מיוחדת: עדכון סטטוס ---
 
         // PUT /api/nurses/{id}/status

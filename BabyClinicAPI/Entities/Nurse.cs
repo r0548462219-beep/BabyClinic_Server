@@ -2,6 +2,19 @@
 {
     public class Nurse
     {
+        public Nurse()
+        {
+        }
+
+        public Nurse(int id, string name, string specialty, string phone, string status)
+        {
+            Id = id;
+            Name = name;
+            Specialty = specialty;
+            Phone = phone;
+            Status = status;
+        }
+
         public int Id { get; set; }
         // שם
         public string Name { get; set; }

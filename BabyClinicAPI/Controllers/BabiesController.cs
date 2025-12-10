@@ -71,6 +71,21 @@ namespace BabyClinicAPI.Controllers
             return NoContent(); // 204: עדכון בוצע בהצלחה
         }
 
+        // DELETE /api/babies/{id}
+        [HttpDelete("{id}")]
+        public IActionResult DeleteBaby(int id)
+        {
+            var baby = _babies.FirstOrDefault(b => b.Id == id);
+
+            if (baby == null)
+            {
+                return NotFound(); // 404
+            }
+
+            _babies.Remove(baby);
+            return NoContent(); // 204
+        }
+
         // --- פעולה מיוחדת: עדכון סטטוס ---
 
         // PUT /api/babies/{id}/status

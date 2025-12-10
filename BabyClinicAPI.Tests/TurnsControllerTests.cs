@@ -19,23 +19,66 @@ namespace BabyClinicAPI.Tests
             _controller = new TurnsController();
         }
 
-        // -----------------------------------------------------
-        // טסט 1: בדיקת שליפת רשימה (GET ALL)
-        // -----------------------------------------------------
+        // =====================================================
+        // טסטים עבור GET ALL
+        // =====================================================
 
         [Fact]
         public void GetTurns_ReturnsOkResult()
         {
             // Act
-            var result = _controller.GetTurns();
+            var actionResult = _controller.GetTurns();
 
             // Assert: בדיקה שהוחזר קוד 200 OK עם תוכן (OkObjectResult)
-            Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(actionResult.Result);
         }
 
-        // -----------------------------------------------------
-        // טסט 2: בדיקת הוספה (POST) מוצלחת
-        // -----------------------------------------------------
+        [Fact]
+        public void GetTurns_ReturnsAllTurns()
+        {
+            // Act
+            var actionResult = _controller.GetTurns();
+            var okResult = actionResult.Result as OkObjectResult;
+            var turns = okResult.Value as IEnumerable<Turn>;
+
+            // Assert: בדיקה שמוחזרות לפחות 2 תורים (הנתונים הראשוניים)
+            Assert.NotNull(turns);
+            Assert.True(turns.Count() >= 2);
+        }
+
+        // =====================================================
+        // טסטים עבור GET BY ID
+        // =====================================================
+
+        [Fact]
+        public void GetTurn_ExistingId_ReturnsOk()
+        {
+            // Arrange: מזהה תור קיים
+            int existingId = 100;
+
+            // Act
+            var actionResult = _controller.GetTurn(existingId);
+
+            // Assert: בדיקה שהוחזר קוד 200 OK
+            Assert.IsType<OkObjectResult>(actionResult.Result);
+        }
+
+        [Fact]
+        public void GetTurn_NonExistingId_ReturnsNotFound()
+        {
+            // Arrange: מזהה שלא קיים
+            int nonExistingId = 999;
+
+            // Act
+            var actionResult = _controller.GetTurn(nonExistingId);
+
+            // Assert: בדיקה שהוחזר קוד 404 Not Found
+            Assert.IsType<NotFoundResult>(actionResult.Result);
+        }
+
+        // =====================================================
+        // טסטים עבור POST (הוספה)
+        // =====================================================
 
         [Fact]
         public void PostTurn_ValidTurn_ReturnsCreatedAtAction()
@@ -43,34 +86,57 @@ namespace BabyClinicAPI.Tests
             // Arrange: יצירת אובייקט תור חדש
             var newTurn = new Turn
             {
-                Id = 50,
-                BabyId = 1, // מזהה תינוק קיים
-                NurseId = 2, // מזהה אחות קיימת
+                Id = 0, // ה-ID יוחלף אוטומטית
+                BabyId = 1,
+                NurseId = 10,
                 DateTime = DateTime.Now.AddDays(7),
                 Status = "נקבע"
             };
 
             // Act
-            var result = _controller.PostTurn(newTurn);
+            var actionResult = _controller.PostTurn(newTurn);
 
             // Assert: בדיקה שהוחזר קוד 201 Created (CreatedAtActionResult)
-            Assert.IsType<CreatedAtActionResult>(result);
+            Assert.IsType<CreatedAtActionResult>(actionResult.Result);
         }
 
-        // -----------------------------------------------------
-        // טסט 3: בדיקת עדכון (PUT) של תור קיים
-        // -----------------------------------------------------
+        [Fact]
+        public void PostTurn_ValidTurn_ReturnsTurnWithNewId()
+        {
+            // Arrange
+            var newTurn = new Turn
+            {
+                Id = 0,
+                BabyId = 2,
+                NurseId = 11,
+                DateTime = DateTime.Now.AddDays(3),
+                Status = "נקבע"
+            };
+
+            // Act
+            var actionResult = _controller.PostTurn(newTurn);
+            var createdResult = actionResult.Result as CreatedAtActionResult;
+            var createdTurn = createdResult.Value as Turn;
+
+            // Assert: בדיקה שהתור קיבל ID חדש
+            Assert.NotNull(createdTurn);
+            Assert.True(createdTurn.Id >= 102); // ה-ID הבא אחרי הנתונים הראשוניים
+        }
+
+        // =====================================================
+        // טסטים עבור PUT (עדכון מלא)
+        // =====================================================
 
         [Fact]
         public void PutTurn_ExistingId_ReturnsNoContent()
         {
-            // Arrange: מזהה תור קיים (בהנחה ש-ID=1 קיים) ואובייקט עדכון
-            int existingId = 1;
+            // Arrange: עדכון תור קיים
+            int existingId = 100;
             var updatedTurn = new Turn
             {
-                Id = 1,
+                Id = existingId,
                 BabyId = 1,
-                NurseId = 2,
+                NurseId = 10,
                 DateTime = DateTime.Now.AddDays(5),
                 Status = "בוצע"
             };
@@ -78,8 +144,113 @@ namespace BabyClinicAPI.Tests
             // Act: ביצוע עדכון
             var result = _controller.PutTurn(existingId, updatedTurn);
 
-            // Assert: בדיקה שהוחזר קוד 204 No Content (עדכון מוצלח)
+            // Assert: בדיקה שהוחזר קוד 204 No Content (עדכון מוצלחה)
             Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
+        public void PutTurn_MismatchedId_ReturnsBadRequest()
+        {
+            // Arrange: ה-ID בנתיב שונה מה-ID באובייקט
+            int pathId = 100;
+            var updatedTurn = new Turn
+            {
+                Id = 999, // ID שונה!
+                BabyId = 1,
+                NurseId = 10,
+                DateTime = DateTime.Now,
+                Status = "נקבע"
+            };
+
+            // Act
+            var result = _controller.PutTurn(pathId, updatedTurn);
+
+            // Assert: בדיקה שהוחזר קוד 400 Bad Request
+            Assert.IsType<BadRequestResult>(result);
+        }
+
+        [Fact]
+        public void PutTurn_NonExistingId_ReturnsNotFound()
+        {
+            // Arrange: ניסיון לעדכן תור שלא קיים
+            int nonExistingId = 999;
+            var updatedTurn = new Turn
+            {
+                Id = nonExistingId,
+                BabyId = 1,
+                NurseId = 10,
+                DateTime = DateTime.Now,
+                Status = "נקבע"
+            };
+
+            // Act
+            var result = _controller.PutTurn(nonExistingId, updatedTurn);
+
+            // Assert: בדיקה שהוחזר קוד 404 Not Found
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        // =====================================================
+        // טסטים עבור DELETE (מחיקה)
+        // =====================================================
+
+        [Fact]
+        public void DeleteTurn_ExistingId_ReturnsNoContent()
+        {
+            // Arrange: מחיקת תור קיים
+            int existingId = 101;
+
+            // Act
+            var result = _controller.DeleteTurn(existingId);
+
+            // Assert: בדיקה שהוחזר קוד 204 No Content (מחיקה מוצלחת)
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
+        public void DeleteTurn_NonExistingId_ReturnsNotFound()
+        {
+            // Arrange: ניסיון למחוק תור שלא קיים
+            int nonExistingId = 999;
+
+            // Act
+            var result = _controller.DeleteTurn(nonExistingId);
+
+            // Assert: בדיקה שהוחזר קוד 404 Not Found
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        // =====================================================
+        // טסטים עבור GET BY DATE (פונקציה מיוחדת)
+        // =====================================================
+
+        [Fact]
+        public void GetTurnsByDate_ReturnsOkResult()
+        {
+            // Arrange: תאריך כלשהו
+            DateTime date = DateTime.Today;
+
+            // Act
+            var actionResult = _controller.GetTurnsByDate(date);
+
+            // Assert: בדיקה שהוחזר קוד 200 OK
+            Assert.IsType<OkObjectResult>(actionResult.Result);
+        }
+
+        [Fact]
+        public void GetTurnsByDate_ReturnsTurnsForDate()
+        {
+            // Arrange: התאריך של התור הראשון בנתונים
+            DateTime date = DateTime.Today;
+
+            // Act
+            var actionResult = _controller.GetTurnsByDate(date);
+            var okResult = actionResult.Result as OkObjectResult;
+            var turns = okResult.Value as List<Turn>;
+
+            // Assert: בדיקה שהתוצאה היא רשימה
+            Assert.NotNull(turns);
+            Assert.IsType<List<Turn>>(turns);
         }
     }
 }
